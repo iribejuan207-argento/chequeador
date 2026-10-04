@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="google" content="notranslate">
+<title>¿Ya estafó a alguien? Chequeador de transferencias</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f8fb;
+    --card: #ffffff;
+    --ink: #10243e;
+    --muted: #4d6178;
+    --line: #cfdbe8;
+    --celeste: #74acdf;
+    --accent: #1b5fa3;
+    --on-accent: #ffffff;
+    --alert: #a62c1a;
+    --alert-bg: #fdeceb;
+    --calm: #1b5fa3;
+    --calm-bg: #e7f1fa;
+    --focus: #1b5fa3;
+    --display: "Bricolage Grotesque", "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+    --body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1a2b;
+      --card: #142338;
+      --ink: #e8f0f8;
+      --muted: #9db0c4;
+      --line: #27405c;
+      --accent: #74acdf;
+      --on-accent: #0e1a2b;
+      --alert: #ffa595;
+      --alert-bg: #3a1c1c;
+      --calm: #9cc7ee;
+      --calm-bg: #162b44;
+      --focus: #9cc7ee;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1a2b;
+    --card: #142338;
+    --ink: #e8f0f8;
+    --muted: #9db0c4;
+    --line: #27405c;
+    --accent: #74acdf;
+    --on-accent: #0e1a2b;
+    --alert: #ffa595;
+    --alert-bg: #3a1c1c;
+    --calm: #9cc7ee;
+    --calm-bg: #162b44;
+    --focus: #9cc7ee;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 1.0625rem;
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+  }
+  main { max-width: 34rem; margin: 0 auto; padding: 2rem 1.25rem 3rem; }
+  h1 {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: clamp(2.1rem, 9vw, 2.9rem);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    margin: 0 0 0.75rem;
+  }
+  .lead { color: var(--muted); margin: 0 0 1.75rem; max-width: 30rem; }
+
+  label.big { display: block; font-weight: 600; margin-bottom: 0.4rem; }
+  .field {
+    width: 100%;
+    font: inherit;
+    font-size: 1.25rem;
+    padding: 0.9rem 0.25rem 0.7rem;
+    color: var(--ink);
+    background: transparent;
+    border: 0;
+    border-bottom: 4px solid var(--celeste);
+    border-radius: 0;
+    outline: none;
+  }
+  .field::placeholder { color: var(--muted); opacity: 0.7; }
+  .field:focus-visible { border-bottom-color: var(--focus); }
+  .hint { color: var(--muted); font-size: 0.9375rem; margin: 0.5rem 0 1rem; min-height: 1.4em; }
+  .hint.bad { color: var(--alert); }
+
+  button {
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 0.6rem;
+    padding: 0.85rem 1.1rem;
+    min-height: 3rem;
+  }
+  button:focus-visible, input[type="checkbox"]:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .primary {
+    width: 100%;
+    background: var(--accent);
+    color: var(--on-accent);
+    border: 2px solid var(--accent);
+  }
+  .ghost {
+    background: transparent;
+    color: var(--ink);
+    border: 2px solid var(--line);
+  }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  #result { margin-top: 1.75rem; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left-width: 8px;
+    border-radius: 0.75rem;
+    padding: 1.1rem 1.15rem 1.2rem;
+  }
+  .card.flagged { border-left-color: var(--alert); background: var(--alert-bg); }
+  .card.clear { border-left-color: var(--calm); background: var(--calm-bg); }
+  .card .what { color: var(--muted); font-size: 0.9375rem; margin: 0 0 0.35rem; overflow-wrap: anywhere; }
+  .card h2 {
+    font-family: var(--display);
+    font-size: 1.7rem;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.4rem;
+  }
+  .card.flagged h2 { color: var(--alert); }
+  .card.clear h2 { color: var(--calm); }
+  .card p { margin: 0 0 0.6rem; }
+  .card .actions { margin-top: 0.9rem; }
+
+  #reportBox { margin-top: 1.25rem; }
+  .reportForm {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    padding: 1.1rem 1.15rem 1.2rem;
+  }
+  .reportForm h3 {
+    font-family: var(--display);
+    font-size: 1.3rem;
+    margin: 0 0 0.35rem;
+  }
+  .check { display: flex; gap: 0.75rem; align-items: flex-start; margin: 1rem 0; }
+  .check input { width: 1.4rem; height: 1.4rem; margin-top: 0.15rem; flex: none; accent-color: var(--accent); }
+  .thanks { color: var(--calm); font-weight: 600; margin: 0.75rem 0 0; }
+  .thanks.bad { color: var(--alert); }
+
+  .notes { margin-top: 2.5rem; border-top: 1px solid var(--line); padding-top: 1.25rem; color: var(--muted); font-size: 0.9375rem; }
+  .notes p { margin: 0 0 0.75rem; }
+  .notes strong { color: var(--ink); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>¿Esa cuenta ya estafó a alguien?</h1>
+  <p class="lead">Pegá el alias, el CBU o el teléfono antes de transferir y mirá si otras personas ya lo reportaron.</p>
+
+  <form id="searchForm" autocomplete="off" novalidate>
+    <label class="big" for="q">Alias, CBU/CVU o teléfono</label>
+    <input class="field" id="q" name="q" type="text" inputmode="text" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="por ejemplo: casa.mesa.pino">
+    <p class="hint" id="hint" aria-live="polite"></p>
+    <button class="primary" id="go" type="submit">Revisar ahora</button>
+  </form>
+
+  <div id="result" aria-live="polite"></div>
+  <div id="reportBox"></div>
+
+  <section class="notes">
+    <p><strong>Versión de prueba.</strong> Los reportes los envía la gente y no están verificados.</p>
+    <p>Esta página no acusa a nadie ni muestra nombres. Solo cuenta cuántas veces se reportó un dato. Que un dato no tenga reportes no significa que sea seguro.</p>
+  </section>
+</main>
+
+<script>
+(function () {
+  var SB_URL = 'https://wlpqrqxcytbiomugjjjw.supabase.co';
+  var SB_KEY = 'sb_publishable_oJaMEF1B6GiNf8PKOPVs_A_MA4OtTLY';
+  var MINE = 'chequeador-estafas:mios:v2';
+
+  function load(k, fallback) {
+    try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : fallback; }
+    catch (e) { return fallback; }
+  }
+  function save(k, v) {
+    try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+  }
+  var mine = load(MINE, []);
+
+  var q = document.getElementById('q');
+  var hint = document.getElementById('hint');
+  var result = document.getElementById('result');
+  var reportBox = document.getElementById('reportBox');
+  var go = document.getElementById('go');
+
+  function rpc(name, body) {
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, 10000);
+    return fetch(SB_URL + '/rest/v1/rpc/' + name, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SB_KEY },
+      body: JSON.stringify(body),
+      signal: ctrl.signal
+    }).then(function (r) {
+      clearTimeout(timer);
+      if (!r.ok) throw new Error('http ' + r.status);
+      return r.text();
+    }).then(function (txt) {
+      return txt ? JSON.parse(txt) : null;
+    }).catch(function (e) {
+      clearTimeout(timer);
+      throw e;
+    });
+  }
+
+  function consultar(key) {
+    return rpc('consultar', { p_clave: key }).then(function (rows) {
+      if (rows && rows.length) {
+        return { n: rows[0].cantidad, last: Date.parse(rows[0].ultimo) };
+      }
+      return null;
+    });
+  }
+
+  function parse(raw) {
+    var s = (raw || '').trim();
+    if (!s) return { error: 'Escribí o pegá un alias, un CBU o un teléfono.' };
+    if (/^[\d\s().+-]+$/.test(s)) {
+      var d = s.replace(/\D/g, '');
+      if (d.length === 22) return { key: 'cbu:' + d, type: 'CBU o CVU', shown: d };
+      if (d.length >= 8 && d.length <= 15) {
+        if (d.length > 10) d = d.slice(-10);
+        return { key: 'tel:' + d, type: 'Teléfono', shown: d };
+      }
+      return { error: 'No parece un CBU (22 números) ni un teléfono. Revisá que esté completo.' };
+    }
+    var a = s.toLowerCase().replace(/\s+/g, '');
+    if (/^[a-z0-9._-]{6,20}$/.test(a)) return { key: 'alias:' + a, type: 'Alias', shown: a };
+    return { error: 'Un alias tiene de 6 a 20 caracteres: letras, números, puntos o guiones.' };
+  }
+
+  function ago(ts) {
+    var days = Math.floor((Date.now() - ts) / 86400000);
+    if (days <= 0) return 'hoy';
+    if (days === 1) return 'ayer';
+    if (days < 31) return 'hace ' + days + ' días';
+    var m = Math.floor(days / 30);
+    return 'hace ' + m + (m === 1 ? ' mes' : ' meses');
+  }
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+
+  function renderResult(p, rec) {
+    result.textContent = '';
+    var n = rec ? rec.n : 0;
+    var card = el('div', 'card ' + (n ? 'flagged' : 'clear'));
+    card.appendChild(el('p', 'what', p.type + ': ' + p.shown));
+    if (n) {
+      card.appendChild(el('h2', '', 'Reportado ' + n + (n === 1 ? ' vez' : ' veces')));
+      card.appendChild(el('p', '', 'Último reporte: ' + ago(rec.last) + '.'));
+      card.appendChild(el('p', '', 'Antes de transferir, confirmá con la persona por otro medio, por ejemplo con una llamada.'));
+    } else {
+      card.appendChild(el('h2', '', 'Sin reportes por ahora'));
+      card.appendChild(el('p', '', 'Que no tenga reportes no significa que sea seguro. Desconfiá si te apuran o te piden pagar por adelantado.'));
+    }
+    var actions = el('div', 'actions');
+    var b = el('button', 'ghost', 'Reportar este dato');
+    b.type = 'button';
+    b.addEventListener('click', function () { renderReport(p); });
+    actions.appendChild(b);
+    card.appendChild(actions);
+    result.appendChild(card);
+  }
+
+  function renderReport(p) {
+    reportBox.textContent = '';
+    var box = el('div', 'reportForm');
+    box.appendChild(el('h3', '', 'Reportar este dato'));
+    box.appendChild(el('p', '', p.type + ': ' + p.shown));
+    var row = el('label', 'check');
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    row.appendChild(cb);
+    row.appendChild(el('span', '', 'Confirmo que este dato se usó para estafarme a mí o a alguien que conozco.'));
+    box.appendChild(row);
+    var send = el('button', 'primary', 'Enviar reporte');
+    send.type = 'button';
+    send.disabled = true;
+    cb.addEventListener('change', function () { send.disabled = !cb.checked; });
+    var msg = el('p', 'thanks');
+    msg.setAttribute('aria-live', 'polite');
+    send.addEventListener('click', function () {
+      if (mine.indexOf(p.key) !== -1) {
+        msg.className = 'thanks bad';
+        msg.textContent = 'Ya reportaste este dato desde este teléfono.';
+        return;
+      }
+      send.disabled = true;
+      msg.className = 'thanks';
+      msg.textContent = 'Enviando...';
+      rpc('reportar', { p_clave: p.key }).then(function () {
+        mine.push(p.key);
+        save(MINE, mine);
+        msg.textContent = 'Gracias. Tu reporte quedó registrado.';
+        return consultar(p.key).then(function (rec) { renderResult(p, rec); });
+      }).catch(function () {
+        send.disabled = !cb.checked;
+        msg.className = 'thanks bad';
+        msg.textContent = 'No pudimos enviar el reporte. Revisá tu conexión y probá de nuevo.';
+      });
+    });
+    box.appendChild(send);
+    box.appendChild(msg);
+    reportBox.appendChild(box);
+    box.scrollIntoView({ block: 'nearest' });
+  }
+
+  document.getElementById('searchForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var p = parse(q.value);
+    reportBox.textContent = '';
+    if (p.error) {
+      hint.textContent = p.error;
+      hint.className = 'hint bad';
+      result.textContent = '';
+      return;
+    }
+    hint.textContent = 'Detectado: ' + p.type;
+    hint.className = 'hint';
+    go.disabled = true;
+    result.textContent = '';
+    result.appendChild(el('p', 'hint', 'Revisando...'));
+    consultar(p.key).then(function (rec) {
+      renderResult(p, rec);
+    }).catch(function () {
+      result.textContent = '';
+      hint.textContent = 'No pudimos conectar. Revisá tu conexión y probá de nuevo.';
+      hint.className = 'hint bad';
+    }).then(function () {
+      go.disabled = false;
+    });
+  });
+
+  q.addEventListener('input', function () {
+    var s = q.value.trim();
+    if (!s) { hint.textContent = ''; hint.className = 'hint'; return; }
+    var p = parse(s);
+    if (p.error) { hint.textContent = ''; hint.className = 'hint'; }
+    else { hint.textContent = 'Detectado: ' + p.type; hint.className = 'hint'; }
+  });
+})();
+</script>
+</body>
+</html>
