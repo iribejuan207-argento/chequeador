@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>¿Es una estafa? Revisá tu mensaje</title>
+<style>
+  :root {
+    --papel: #f2f5f7;
+    --tinta: #12263a;
+    --tinta-suave: #4b5d6e;
+    --linea: #cfd8df;
+    --blanco: #ffffff;
+    --peligro: #c32f27;
+    --cuidado: #b97a00;
+    --seguro: #1d7a4d;
+    --accion: #12263a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-tema="claro"]) {
+      --papel: #0e1a26;
+      --tinta: #e8eef3;
+      --tinta-suave: #9db0c0;
+      --linea: #2a3d50;
+      --blanco: #15283a;
+      --accion: #e8eef3;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--papel);
+    color: var(--tinta);
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.5;
+    padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0);
+  }
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 28px 18px 48px;
+  }
+  h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(30px, 8vw, 44px);
+    line-height: 1.1;
+    margin: 0 0 12px;
+    letter-spacing: -0.01em;
+  }
+  .bajada {
+    color: var(--tinta-suave);
+    margin: 0 0 24px;
+    max-width: 46ch;
+  }
+  label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 170px;
+    padding: 14px;
+    font: inherit;
+    color: var(--tinta);
+    background: var(--blanco);
+    border: 2px solid var(--linea);
+    border-radius: 10px;
+    resize: vertical;
+  }
+  textarea:focus-visible, button:focus-visible {
+    outline: 3px solid #3b82c4;
+    outline-offset: 2px;
+  }
+  .acciones { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  button {
+    font: inherit;
+    font-weight: 700;
+    padding: 14px 20px;
+    border-radius: 10px;
+    border: 2px solid var(--accion);
+    cursor: pointer;
+  }
+  #revisar { background: var(--accion); color: var(--papel); flex: 1 1 200px; }
+  #revisar[disabled] { opacity: 0.6; cursor: wait; }
+  #limpiar { background: transparent; color: var(--tinta); }
+
+  #estado { margin-top: 24px; color: var(--tinta-suave); min-height: 1.5em; }
+
+  #resultado {
+    margin-top: 24px;
+    background: var(--blanco);
+    border: 2px solid var(--linea);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  #resultado[hidden] { display: none; }
+  #franja {
+    padding: 16px 18px;
+    color: #fff;
+    background: var(--cuidado);
+  }
+  #franja.peligro { background: var(--peligro); }
+  #franja.cuidado { background: var(--cuidado); }
+  #franja.seguro { background: var(--seguro); }
+  #veredicto { font-weight: 800; font-size: 15px; margin: 0 0 2px; }
+  #titulo {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 24px;
+    line-height: 1.2;
+    margin: 0;
+  }
+  .cuerpo { padding: 18px; }
+  #explicacion { margin: 0 0 18px; }
+  h2 { font-size: 18px; margin: 0 0 8px; }
+  #que-hacer { margin: 0; padding-left: 22px; }
+  #que-hacer li { margin-bottom: 8px; }
+  .aviso {
+    margin-top: 28px;
+    font-size: 14px;
+    color: var(--tinta-suave);
+    border-top: 1px solid var(--linea);
+    padding-top: 14px;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    #resultado { animation: aparece 0.25s ease-out; }
+    @keyframes aparece { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>¿Es una estafa?</h1>
+  <p class="bajada">Pegá el mensaje que te llegó por WhatsApp, SMS o mail. Te decimos si es peligroso y qué hacer, antes de que toques nada.</p>
+
+  <label for="mensaje">Mensaje sospechoso</label>
+  <textarea id="mensaje" placeholder="Pegá acá el mensaje completo, con el link si lo tiene"></textarea>
+
+  <div class="acciones">
+    <button id="revisar" type="button">Revisar mensaje</button>
+    <button id="limpiar" type="button">Borrar</button>
+  </div>
+
+  <p id="estado" role="status" aria-live="polite"></p>
+
+  <section id="resultado" hidden>
+    <div id="franja">
+      <p id="veredicto"></p>
+      <p id="titulo"></p>
+    </div>
+    <div class="cuerpo">
+      <p id="explicacion"></p>
+      <h2>Qué hacer ahora</h2>
+      <ul id="que-hacer"></ul>
+    </div>
+  </section>
+
+  <p class="aviso">Esta herramienta te orienta, pero no reemplaza a tu banco. Si ya pasaste datos o plata, llamá de inmediato al número oficial que figura en tu tarjeta.</p>
+</main>
+
+<script>
+  // Dirección de la función analizar-mensaje en Supabase
+  var URL_FUNCION = "https://wlpqrqxcytbiomugjjjw.supabase.co/functions/v1/analizar-mensaje";
+
+  var cajaMensaje = document.getElementById("mensaje");
+  var botonRevisar = document.getElementById("revisar");
+  var botonLimpiar = document.getElementById("limpiar");
+  var estado = document.getElementById("estado");
+  var resultado = document.getElementById("resultado");
+  var franja = document.getElementById("franja");
+  var veredicto = document.getElementById("veredicto");
+  var titulo = document.getElementById("titulo");
+  var explicacion = document.getElementById("explicacion");
+  var listaConsejos = document.getElementById("que-hacer");
+
+  var ETIQUETAS = { PELIGRO: "Peligro", CUIDADO: "Cuidado", SEGURO: "Parece seguro" };
+
+  function mostrarResultado(d) {
+    var clave = String(d.veredicto || "CUIDADO").toUpperCase();
+    if (!ETIQUETAS[clave]) { clave = "CUIDADO"; }
+    franja.className = clave.toLowerCase();
+    veredicto.textContent = ETIQUETAS[clave];
+    titulo.textContent = d.titulo || "";
+    explicacion.textContent = d.explicacion || "";
+    listaConsejos.textContent = "";
+    var consejos = Array.isArray(d.que_hacer) ? d.que_hacer : [];
+    consejos.forEach(function (c) {
+      var li = document.createElement("li");
+      li.textContent = String(c);
+      listaConsejos.appendChild(li);
+    });
+    resultado.hidden = false;
+    resultado.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function revisar() {
+    var texto = cajaMensaje.value.trim();
+    if (!texto) {
+      estado.textContent = "Pegá primero el mensaje que querés revisar.";
+      return;
+    }
+    botonRevisar.disabled = true;
+    resultado.hidden = true;
+    estado.textContent = "Revisando el mensaje...";
+    try {
+      var r = await fetch(URL_FUNCION, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mensaje: texto })
+      });
+      if (!r.ok) { throw new Error("Respuesta " + r.status); }
+      var datos = await r.json();
+      estado.textContent = "";
+      mostrarResultado(datos);
+    } catch (e) {
+      estado.textContent = "No pudimos revisar el mensaje ahora. Probá de nuevo en un minuto. Mientras tanto, no toques ningún link.";
+    } finally {
+      botonRevisar.disabled = false;
+    }
+  }
+
+  botonRevisar.addEventListener("click", revisar);
+  botonLimpiar.addEventListener("click", function () {
+    cajaMensaje.value = "";
+    resultado.hidden = true;
+    estado.textContent = "";
+    cajaMensaje.focus();
+  });
+</script>
+</body>
+</html>
