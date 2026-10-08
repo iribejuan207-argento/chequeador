@@ -1,0 +1,8 @@
+self.addEventListener('install', function () { self.skipWaiting(); });
+self.addEventListener('activate', function (e) { e.waitUntil(self.clients.claim()); });
+self.addEventListener('fetch', function (e) {
+  if (e.request.method !== 'GET') { return; }
+  e.respondWith(fetch(e.request).catch(function () {
+    return new Response('Sin conexión. Conectate a internet para revisar mensajes.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  }));
+});
