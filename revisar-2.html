@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Revisar un mensaje - ¿Es una estafa?</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#12263a">
+<style>
+  :root {
+    --papel: #f2f5f7;
+    --tinta: #12263a;
+    --tinta-suave: #4b5d6e;
+    --linea: #cfd8df;
+    --blanco: #ffffff;
+    --peligro: #c32f27;
+    --cuidado: #b97a00;
+    --seguro: #1d7a4d;
+    --accion: #12263a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-tema="claro"]) {
+      --papel: #0e1a26;
+      --tinta: #e8eef3;
+      --tinta-suave: #9db0c0;
+      --linea: #2a3d50;
+      --blanco: #15283a;
+      --accion: #e8eef3;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--papel);
+    color: var(--tinta);
+    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 19px;
+    line-height: 1.5;
+    padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0);
+  }
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 28px 18px 48px;
+  }
+  h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(30px, 8vw, 44px);
+    line-height: 1.1;
+    margin: 0 0 12px;
+    letter-spacing: -0.01em;
+  }
+  .bajada {
+    color: var(--tinta-suave);
+    margin: 0 0 24px;
+    max-width: 46ch;
+  }
+  label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 170px;
+    padding: 14px;
+    font: inherit;
+    color: var(--tinta);
+    background: var(--blanco);
+    border: 2px solid var(--linea);
+    border-radius: 10px;
+    resize: vertical;
+  }
+  textarea:focus-visible, button:focus-visible {
+    outline: 3px solid #3b82c4;
+    outline-offset: 2px;
+  }
+  .acciones { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  button {
+    font: inherit;
+    font-weight: 700;
+    padding: 14px 20px;
+    border-radius: 10px;
+    border: 2px solid var(--accion);
+    cursor: pointer;
+  }
+  #pegar {
+    width: 100%;
+    margin-top: 12px;
+    padding: 20px;
+    font-size: 22px;
+    background: var(--seguro);
+    border-color: var(--seguro);
+    color: #fff;
+  }
+  #pegar[disabled] { opacity: 0.6; cursor: wait; }
+  #captura {
+    width: 100%;
+    margin-top: 4px;
+    padding: 18px;
+    font-size: 20px;
+    background: var(--blanco);
+    color: var(--tinta);
+    border-color: var(--seguro);
+  }
+  #captura[disabled] { opacity: 0.6; cursor: wait; }
+  #vista {
+    border: 2px solid var(--seguro);
+    border-radius: 10px;
+    background: var(--blanco);
+    padding: 8px;
+    text-align: center;
+  }
+  #vista img {
+    display: block;
+    max-width: 100%;
+    max-height: 260px;
+    margin: 0 auto;
+    border-radius: 6px;
+  }
+  #vista p { margin: 6px 0 0; font-size: 16px; font-weight: 700; color: var(--seguro); }
+  #compartir {
+    display: block;
+    margin-top: 18px;
+    padding: 16px;
+    text-align: center;
+    text-decoration: none;
+    font-weight: 700;
+    border-radius: 10px;
+    background: #1f8f4e;
+    color: #fff;
+  }
+  #revisar { background: var(--accion); color: var(--papel); flex: 1 1 200px; }
+  #revisar[disabled] { opacity: 0.6; cursor: wait; }
+  #limpiar { background: transparent; color: var(--tinta); }
+
+  #estado { margin-top: 24px; color: var(--tinta-suave); min-height: 1.5em; }
+  #estado.trabajando {
+    color: var(--tinta);
+    font-size: 21px;
+    font-weight: 800;
+    text-align: center;
+    background: var(--blanco);
+    border: 3px solid var(--seguro);
+    border-radius: 12px;
+    padding: 18px 14px;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    max-width: 616px;
+    margin: 0 auto;
+    z-index: 40;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  }
+
+  #resultado {
+    margin-top: 24px;
+    background: var(--blanco);
+    border: 2px solid var(--linea);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  #resultado[hidden] { display: none; }
+  [hidden] { display: none !important; }
+  #franja {
+    padding: 16px 18px;
+    color: #fff;
+    background: var(--cuidado);
+  }
+  #franja.peligro { background: var(--peligro); }
+  #franja.cuidado { background: var(--cuidado); }
+  #franja.seguro { background: var(--seguro); }
+  #veredicto { font-weight: 800; font-size: 15px; margin: 0 0 2px; }
+  #titulo {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 24px;
+    line-height: 1.2;
+    margin: 0;
+  }
+  .cuerpo { padding: 18px; }
+  #explicacion { margin: 0 0 18px; }
+  h2 { font-size: 18px; margin: 0 0 8px; }
+  #que-hacer { margin: 0; padding-left: 22px; }
+  #que-hacer li { margin-bottom: 8px; }
+  .ayuda { color: var(--tinta-suave); font-size: 16px; margin: 8px 0 24px; }
+  .aviso {
+    margin-top: 28px;
+    font-size: 14px;
+    color: var(--tinta-suave);
+    border-top: 1px solid var(--linea);
+    padding-top: 14px;
+  }
+  .aviso a { color: inherit; font-weight: 700; }
+  @media (prefers-reduced-motion: no-preference) {
+    #resultado { animation: aparece 0.25s ease-out; }
+    @keyframes aparece { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  }
+  .volver { display: inline-block; margin: 0 0 14px; color: var(--tinta-suave); font-weight: 700; text-decoration: none; }
+</style>
+</head>
+<body>
+<main>
+  <a class="volver" href="app.html">&larr; Volver</a>
+  <h1>Revisar un mensaje</h1>
+  <p class="bajada">Pegá el mensaje que te llegó por WhatsApp, SMS o mail. Te decimos si es peligroso y qué hacer, antes de que toques nada.</p>
+
+  <button id="pegar" type="button">Pegar mensaje y revisar</button>
+  <p class="ayuda" id="ayuda-pegar">Primero copiá el mensaje sospechoso y después tocá este botón verde.</p>
+
+  <button id="captura" type="button">📷 Subir captura de pantalla</button>
+  <p class="ayuda">¿No podés copiar el texto? Sacale una captura de pantalla al mensaje y subila acá. Se revisa sola.</p>
+  <input id="archivo" type="file" accept="image/*" hidden>
+
+  <label for="mensaje">O escribilo acá</label>
+  <textarea id="mensaje" placeholder="Pegá acá el mensaje completo, con el link si lo tiene"></textarea>
+  <div id="vista" hidden>
+    <img id="vista-img" alt="La captura que subiste">
+    <p>✓ Esta es la captura que estás revisando</p>
+  </div>
+
+  <div class="acciones">
+    <button id="revisar" type="button">Revisar mensaje</button>
+    <button id="limpiar" type="button">Borrar</button>
+  </div>
+
+  <p id="estado" role="status" aria-live="polite"></p>
+
+  <section id="resultado" hidden>
+    <div id="franja">
+      <p id="veredicto"></p>
+      <p id="titulo"></p>
+    </div>
+    <div class="cuerpo">
+      <p id="explicacion"></p>
+      <h2>Qué hacer ahora</h2>
+      <ul id="que-hacer"></ul>
+      <a id="compartir" href="#" target="_blank" rel="noopener">Avisar a un familiar por WhatsApp</a>
+    </div>
+  </section>
+
+  <p class="aviso">Esta herramienta te orienta, pero no reemplaza a tu banco. ¿Ya te estafaron? Llamá de inmediato al número oficial que figura en tu tarjeta y hacé la denuncia en la comisaría más cercana. En provincia de Buenos Aires también podés hacerla <a href="https://seguridad.gba.gob.ar" target="_blank" rel="noopener">por internet</a>.</p>
+</main>
+
+<script>
+  // Dirección de la función analizar-mensaje en Supabase
+  var URL_FUNCION = "https://wlpqrqxcytbiomugjjjw.supabase.co/functions/v1/analizar-mensaje";
+
+  var cajaMensaje = document.getElementById("mensaje");
+  var botonRevisar = document.getElementById("revisar");
+  var botonLimpiar = document.getElementById("limpiar");
+  var estado = document.getElementById("estado");
+  var resultado = document.getElementById("resultado");
+  var franja = document.getElementById("franja");
+  var veredicto = document.getElementById("veredicto");
+  var titulo = document.getElementById("titulo");
+  var explicacion = document.getElementById("explicacion");
+  var listaConsejos = document.getElementById("que-hacer");
+
+  var ETIQUETAS = { PELIGRO: "Peligro", CUIDADO: "Cuidado", SEGURO: "Parece seguro" };
+
+  function mostrarResultado(d) {
+    var clave = String(d.veredicto || "CUIDADO").toUpperCase();
+    if (!ETIQUETAS[clave]) { clave = "CUIDADO"; }
+    franja.className = clave.toLowerCase();
+    veredicto.textContent = ETIQUETAS[clave];
+    titulo.textContent = d.titulo || "";
+    explicacion.textContent = d.explicacion || "";
+    listaConsejos.textContent = "";
+    var consejos = Array.isArray(d.que_hacer) ? d.que_hacer : [];
+    consejos.forEach(function (c) {
+      var li = document.createElement("li");
+      li.textContent = String(c);
+      listaConsejos.appendChild(li);
+    });
+    var resumen = ETIQUETAS[clave] + ": " + (d.titulo || "") + "\n" + (d.explicacion || "") +
+      "\n\nRevisá tus mensajes sospechosos acá: " + location.href;
+    document.getElementById("compartir").href = "https://wa.me/?text=" + encodeURIComponent(resumen);
+    resultado.hidden = false;
+    resultado.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function revisar(imagen) {
+    var texto = cajaMensaje.value.trim();
+    if (!texto && !imagen) {
+      estado.textContent = "Pegá primero el mensaje que querés revisar.";
+      return;
+    }
+    botonRevisar.disabled = true;
+    resultado.hidden = true;
+    var base = imagen ? "⏳ Revisando tu captura" : "⏳ Revisando el mensaje";
+    var segundos = 0;
+    estado.classList.add("trabajando");
+    estado.textContent = base + "... esperá, puede tardar hasta 30 segundos";
+    estado.scrollIntoView({ behavior: "smooth", block: "center" });
+    var reloj = setInterval(function () {
+      segundos++;
+      estado.textContent = base + "... " + segundos + " s. Esperá, puede tardar hasta 30 segundos";
+    }, 1000);
+    var corte = new AbortController();
+    var temporizador = setTimeout(function () { corte.abort(); }, 60000);
+    try {
+      var r = await fetch(URL_FUNCION, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mensaje: texto, imagen: imagen }),
+        signal: corte.signal
+      });
+      if (!r.ok) { throw new Error("Respuesta " + r.status); }
+      var datos = await r.json();
+      estado.classList.remove("trabajando");
+      estado.textContent = "";
+      mostrarResultado(datos);
+    } catch (e) {
+      estado.classList.remove("trabajando");
+      estado.textContent = "No pudimos revisar el mensaje ahora. Probá de nuevo en un minuto. Mientras tanto, no toques ningún link.";
+      estado.scrollIntoView({ behavior: "smooth", block: "center" });
+    } finally {
+      clearInterval(reloj);
+      clearTimeout(temporizador);
+      estado.classList.remove("trabajando");
+      botonRevisar.disabled = false;
+    }
+  }
+
+  var botonPegar = document.getElementById("pegar");
+  botonPegar.addEventListener("click", async function () {
+    botonPegar.disabled = true;
+    try {
+      var t = await navigator.clipboard.readText();
+      if (!t || !t.trim()) {
+        estado.textContent = "No hay nada copiado. Copiá primero el mensaje sospechoso y volvé a tocar el botón verde.";
+      } else {
+        ocultarCaptura();
+        cajaMensaje.value = t;
+        botonPegar.disabled = false;
+        await revisar();
+      }
+    } catch (e) {
+      ocultarCaptura();
+      estado.textContent = "No pude pegarlo solo. Tocá el recuadro de abajo, mantené apretado y tocá Pegar.";
+      cajaMensaje.focus();
+    } finally {
+      botonPegar.disabled = false;
+    }
+  });
+  // Mensaje compartido desde otra app (WhatsApp, SMS, etc.)
+  (function () {
+    var p = new URLSearchParams(location.search);
+    var partes = [p.get("titulo"), p.get("texto"), p.get("enlace")].filter(function (x) { return x && x.trim(); });
+    if (partes.length) {
+      cajaMensaje.value = partes.join("\n");
+      history.replaceState(null, "", location.pathname);
+      revisar();
+    }
+  })();
+
+  botonRevisar.addEventListener("click", function () { revisar(); });
+
+  // Captura de pantalla: se achica antes de enviarla y no se guarda en ningún lado
+  var botonCaptura = document.getElementById("captura");
+  var vista = document.getElementById("vista");
+  var etiquetaMensaje = document.querySelector('label[for="mensaje"]');
+  function mostrarCaptura(src) {
+    document.getElementById("vista-img").src = src;
+    vista.hidden = false;
+    cajaMensaje.hidden = true;
+    botonRevisar.hidden = true;
+    if (etiquetaMensaje) { etiquetaMensaje.hidden = true; }
+  }
+  function ocultarCaptura() {
+    vista.hidden = true;
+    document.getElementById("vista-img").removeAttribute("src");
+    cajaMensaje.hidden = false;
+    botonRevisar.hidden = false;
+    if (etiquetaMensaje) { etiquetaMensaje.hidden = false; }
+  }
+  var campoArchivo = document.getElementById("archivo");
+  function achicar(archivo) {
+    return new Promise(function (ok, fallo) {
+      var url = URL.createObjectURL(archivo);
+      var im = new Image();
+      im.onload = function () {
+        var k = Math.min(1, 2000 / Math.max(im.naturalWidth, im.naturalHeight));
+        var c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(im.naturalWidth * k));
+        c.height = Math.max(1, Math.round(im.naturalHeight * k));
+        c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        ok({ mime: "image/jpeg", datos: c.toDataURL("image/jpeg", 0.8).split(",")[1] });
+      };
+      im.onerror = function () { URL.revokeObjectURL(url); fallo(new Error("imagen")); };
+      im.src = url;
+    });
+  }
+  botonCaptura.addEventListener("click", function () { campoArchivo.click(); });
+  campoArchivo.addEventListener("change", async function () {
+    var archivo = campoArchivo.files && campoArchivo.files[0];
+    campoArchivo.value = "";
+    if (!archivo) { return; }
+    botonCaptura.disabled = true;
+    estado.textContent = "Preparando la captura...";
+    try {
+      var imagen = await achicar(archivo);
+      cajaMensaje.value = "";
+      mostrarCaptura("data:" + imagen.mime + ";base64," + imagen.datos);
+      await revisar(imagen);
+    } catch (e) {
+      estado.textContent = "No pude abrir esa imagen. Probá con otra captura.";
+    } finally {
+      botonCaptura.disabled = false;
+    }
+  });
+  botonLimpiar.addEventListener("click", function () {
+    ocultarCaptura();
+    cajaMensaje.value = "";
+    resultado.hidden = true;
+    estado.textContent = "";
+    cajaMensaje.focus();
+  });
+</script>
+</body>
+</html>
